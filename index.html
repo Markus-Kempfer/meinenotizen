@@ -450,7 +450,7 @@ window.inviteUser = (catId) => {
   const perm  = pi.value;
   if(!email||!email.includes('@')){ toast('Bitte gültige E-Mail eingeben.','err'); return; }
   if(!user){ toast('Bitte anmelden.','err'); return; }
-  const ekey = email.replace(/\./g,'_').replace(/@/g,'__');
+  const ekey = email.toLowerCase().replace(/\./g,'_').replace(/@/g,'__');
   const cat  = myCats[catId]||{};
   const path = `sharedAccess/${user.uid}/${catId}`;
   get(ref(db,path)).then(s=>{
@@ -505,17 +505,15 @@ function delN(id){
 
 // ── EMAIL KEY HELPERS ────────────────────────────────────
 function emailToKey(email){
-  return email.replace(/\./g,'_').replace(/@/g,'__');
+  // dots → _ , @ → __ 
+  // Result: alexandrakempfer86__gmail_com
+  return email.toLowerCase().replace(/\./g,'_').replace(/@/g,'__');
 }
 function keyMatchesEmail(key, email){
-  // Generate all possible key formats for this email and check any match
-  const variants = [
-    email.replace(/\./g,'_').replace(/@/g,'__'),  // new format: __
-    email.replace(/\./g,'_').replace(/@/g,'_at_'), // old format: _at_
-    email.replace(/[.@]/g,'_'),                    // simple: all to _
-    email.replace(/\./g,'_').replace(/@/g,'_'),    // another variant
-  ];
-  return variants.includes(key);
+  const e = email.toLowerCase();
+  // Only one correct format: dots→_ and @→__
+  const canonical = e.replace(/\./g,'_').replace(/@/g,'__');
+  return key === canonical;
 }
 
 // ── RENDER ────────────────────────────────────────────────
