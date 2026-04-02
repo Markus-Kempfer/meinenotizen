@@ -503,18 +503,36 @@ function delN(id){
   else { delete myN[id]; localStorage.setItem('mn',JSON.stringify(myN)); render(); }
 }
 
+// ── EMAIL KEY HELPERS ────────────────────────────────────
+function emailToKey(email){
+  return email.replace(/\./g,'_').replace(/@/g,'__');
+}
+function keyMatchesEmail(key, email){
+  // Generate all possible key formats for this email and check any match
+  const variants = [
+    email.replace(/\./g,'_').replace(/@/g,'__'),  // new format: __
+    email.replace(/\./g,'_').replace(/@/g,'_at_'), // old format: _at_
+    email.replace(/[.@]/g,'_'),                    // simple: all to _
+    email.replace(/\./g,'_').replace(/@/g,'_'),    // another variant
+  ];
+  return variants.includes(key);
+}
+
 // ── RENDER ────────────────────────────────────────────────
 window.render = function(){
   const q  = document.getElementById('qi').value.toLowerCase();
-  const me = user ? user.email.replace(/\./g,'_').replace(/@/g,'__') : '';
+  const myEmail = user ? user.email.toLowerCase() : '';
 
   // shared notes
   const sn=[];
   Object.entries(shared).forEach(([ouid,cats])=>{
     if(ouid===user?.uid) return;
     Object.entries(cats).forEach(([cid,cd])=>{
-      if(!cd.users||!cd.users[me]) return;
-      const perm=cd.users[me];
+      if(!cd.users) return;
+      // Find matching key for my email
+      const myKey = Object.keys(cd.users).find(k => keyMatchesEmail(k, myEmail));
+      if(!myKey) return;
+      const perm=cd.users[myKey];
       const ck='n_'+ouid;
       if(!ncache[ck]){
         ncache[ck]={};
@@ -678,8 +696,8 @@ function catList(){
   Object.entries(shared).forEach(([ouid, cats])=>{
     if(ouid===uid) return;
     Object.entries(cats).forEach(([cid, cd])=>{
-      const meKey = user?.email.replace(/\./g,'_').replace(/@/g,'__')||'';
-      if(cd.users&&cd.users[meKey]){
+      const meKey = user ? Object.keys(cd.users||{}).find(k=>keyMatchesEmail(k, user.email.toLowerCase())) : null;
+      if(cd.users && meKey){
         sharedWithMe.push({
           ownerName: cd.ownerName||cd.ownerEmail||'?',
           catName:   cd.catName||cid,
