@@ -336,9 +336,7 @@ const CFG = {
 const COLORS = ['#0a1628','#1a5276','#1e8449','#6c3483','#c9a84c','#c0392b','#d35400','#2e86c1','#5d6d7e','#117a65'];
 const ICONS  = ['📋','⭐','🔷','📌','🔔','💼','🌟','🔑','🗂️','📎'];
 const DEF_CATS = {
-  glaserei:    {name:'Glaserei',    icon:'🪟', color:'#1a5276'},
-  ideen:       {name:'Ideen',       icon:'💡', color:'#c9a84c'},
-  privat:      {name:'Privat',      icon:'🏠', color:'#2e86c1'},
+  privat: {name:'Privat', icon:'🏠', color:'#2e86c1'},
 };
 
 // ── STATE ─────────────────────────────────────────────────
@@ -581,6 +579,37 @@ window.delCat=id=>{
   toast('Gelöscht.','err');
 };
 
+window.editCat=id=>{
+  const cat=myCats[id]||{};
+  const newName=prompt('Neuer Name:',cat.name||'');
+  if(!newName||!newName.trim()) return;
+  set(ref(db,`users/${user.uid}/categories/${id}/name`),newName.trim());
+  toast('Umbenannt ✓','ok');
+};
+
+window.editCatColor=id=>{
+  const cat=myCats[id]||{};
+  // Show color picker inline in catList
+  const colorHtml=COLORS.map(c=>`
+    <div onclick="window.setCatColor('${id}','${c}')" style="width:28px;height:28px;border-radius:50%;background:${c};cursor:pointer;border:3px solid ${c===cat.color?'var(--navy)':'transparent'};display:inline-block;margin:3px;transition:transform .15s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'"></div>
+  `).join('');
+  const existing=document.getElementById('colorpick_'+id);
+  if(existing){ existing.remove(); return; }
+  const div=document.createElement('div');
+  div.id='colorpick_'+id;
+  div.style.cssText='margin-top:8px;padding:8px;background:var(--bg);border:1.5px solid var(--bo);border-radius:8px;';
+  div.innerHTML=`<div style="font-size:11px;color:var(--mu);margin-bottom:6px;font-weight:600;">Farbe wählen:</div>${colorHtml}`;
+  const cih=document.querySelector(`[data-catid="${id}"]`);
+  if(cih) cih.after(div);
+};
+
+window.setCatColor=(id,color)=>{
+  set(ref(db,`users/${user.uid}/categories/${id}/color`),color);
+  const el=document.getElementById('colorpick_'+id);
+  if(el) el.remove();
+  toast('Farbe geändert ✓','ok');
+};
+
 function catList(){
   const uid=user?.uid||'';
   const myShar=sharing[uid]||{}; // {catId: {guestUid: perm}}
@@ -703,11 +732,12 @@ function catList(){
 
         return `
         <div class="ci">
-          <div class="cih">
-            <div class="cdo" style="background:${cat.color}"></div>
+          <div class="cih" data-catid="${id}">
+            <div class="cdo" style="background:${cat.color};cursor:pointer;" title="Farbe ändern" onclick="window.editCatColor('${id}')"></div>
             <div class="cin">${cat.icon} ${cat.name}</div>
             ${guestCount>0?`<span style="font-size:10px;background:rgba(201,168,76,.15);color:var(--gold);border-radius:10px;padding:2px 8px;font-weight:600;">${guestCount} User</span>`:''}
             <button class="ib" title="Einladungslink" onclick="window.openShareLink('${id}')" style="font-size:14px;">📤</button>
+            <button class="ib" title="Umbenennen" onclick="window.editCat('${id}')" style="font-size:12px">✏️</button>
             <button class="ib" onclick="window.delCat('${id}')" style="font-size:12px">🗑️</button>
           </div>
           <div style="margin-top:8px;">
